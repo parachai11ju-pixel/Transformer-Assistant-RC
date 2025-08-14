@@ -773,13 +773,7 @@ async function saveScoreToSheet(payload) {
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(payload)
     });
-    const res = await fetch(GAS_URL, {
-  method: 'POST',
-  mode: 'no-cors',  // ✅ เพิ่มบรรทัดนี้
-  headers: {'Content-Type':'application/json'},
-  body: JSON.stringify(payload)
-});
-    const json = await res.json().catch(()=>({}));
+       const json = await res.json().catch(()=>({}));
     if(res.ok && json.ok){
       msg.textContent = "✅ บันทึกเรียบร้อย";
     }else{
@@ -885,6 +879,7 @@ function sayHint(n){
 </script>
 </body>
 </html>
+
 
 
 
