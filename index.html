@@ -49,7 +49,7 @@ h1{margin:0 0 10px; line-height:1.15; font-size:clamp(24px,6vw,44px); letter-spa
   background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
   border-radius:16px; padding:14px 14px; text-align:left;
   font-size:clamp(15px,4.5vw,20px); font-weight:800; line-height:1.35; cursor:pointer;
-  transition:transform .06s ease,border-color .2s, background .2s; color:#fff; /* ตัวเลือกสีขาว */
+  transition:transform .06s ease,border-color .2s, background .2s; color:#fff;
 }
 .choice:active{transform:scale(.99)}
 .choice .letter{flex:0 0 auto; width:36px; height:36px; border-radius:10px; display:grid; place-items:center; font-weight:900;
@@ -68,8 +68,6 @@ select,option{font-weight:700}
 small.tag{font-size:.8em; opacity:.8}
 hr{border:0; border-top:1px dashed rgba(255,255,255,.2); margin:10px 0}
 .tagBtn{margin-left:6px}
-
-/* ปุ่ม Next แบบลอยขอบล่าง (ปุ่มเดียวที่ใช้) */
 .footerNext{
   position: fixed; left: 0; right: 0; bottom: 12px; z-index: 10;
   display: none; justify-content: center;
@@ -77,6 +75,7 @@ hr{border:0; border-top:1px dashed rgba(255,255,255,.2); margin:10px 0}
 }
 .footerNext.show{ display:flex; pointer-events:auto }
 .footerNext .btn{ box-shadow:0 10px 30px rgba(0,0,0,.45); }
+input[type="text"]{all:unset;padding:10px 12px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.06)}
 </style>
 </head>
 <body>
@@ -87,11 +86,10 @@ hr{border:0; border-top:1px dashed rgba(255,255,255,.2); margin:10px 0}
   <div class="card" id="screen-home">
     <div class="badge">🚀 พลิกโฉมงานวิศวกรรมด้วย AI — ซ่อมก่อนพัง บริหารก่อนวิกฤติ (MEA‑SPU)</div>
     <h1>AI Quiz Master: จัดลำดับความสำคัญ “ซ่อมบำรุงหม้อแปลงไฟฟ้าในระบบจำหน่ายของ MEA”</h1>
-    <div class="sub">พัฒนาโดย <b>ผศ.ดร.ภรชัย จูอนุวัฒนกุล</b> • พร้อม <b>คำถามชวนคิด</b> (POE) • เหมาะกับนิสิต ช่าง/วิศวกร ระบบจำหน่ายของการไฟฟ้านครหลวง</div>
+    <div class="sub">พัฒนาโดย <b>ผศ.ดร.ภรชัย จูอนุวัฒนกุล</b> • พร้อม <b>คำถามชวนคิด</b> • เหมาะกับนิสิต ช่าง/วิศวกร ระบบจำหน่ายของการไฟฟ้านครหลวง</div>
     <div class="row" style="margin-top:12px">
       <div class="pill">⏱️ 45 วินาที/ข้อ</div>
       <div class="pill">🏁 ตอบถูกเร็ว ⇒ ใกล้ <b>1,000</b> คะแนน (ลดลงตามเวลา)</div>
-      <div class="pill">🎧 ดนตรีเร่งจังหวะเมื่อเวลาใกล้หมด</div>
       <label class="pill"><input type="checkbox" id="mute" checked/> 🔇 เริ่มต้นปิดเสียง (กดเพื่อเปิด/ปิด)</label>
     </div>
     <hr/>
@@ -159,7 +157,6 @@ hr{border:0; border-top:1px dashed rgba(255,255,255,.2); margin:10px 0}
     </div>
     <div class="explain hidden" id="explain"></div>
 
-    <!-- ปุ่มลอยขอบล่าง (ปุ่มถัดไปปุ่มเดียว) -->
     <div class="footerNext" id="footerNext">
       <button class="btn primary" id="btn-next-fixed">ข้อต่อไป ➜</button>
     </div>
@@ -176,6 +173,18 @@ hr{border:0; border-top:1px dashed rgba(255,255,255,.2); margin:10px 0}
       <button class="btn" id="btn-home">หน้าแรก</button>
       <button class="btn" id="btn-review">รีวิวเหตุผลทุกข้อ</button>
     </div>
+
+    <!-- บันทึกคะแนนลง Google Sheet -->
+    <div class="leader">
+      <div class="title">📝 บันทึกคะแนนลง Google Sheet</div>
+      <div class="flex">
+        <input type="text" id="saveName" placeholder="ชื่อผู้ใช้" />
+        <input type="text" id="saveId" placeholder="รหัสผู้ใช้" />
+        <button class="btn primary" id="btn-save">บันทึกคะแนน</button>
+      </div>
+      <div id="saveMsg" class="sub" style="margin-top:8px"></div>
+    </div>
+
     <div class="leader">
       <div class="title">📊 รายการคำตอบของผู้ใช้</div>
       <div id="table"></div>
@@ -194,7 +203,11 @@ hr{border:0; border-top:1px dashed rgba(255,255,255,.2); margin:10px 0}
 </div>
 
 <script>
-/* ========= Question Bank: Easy/Medium/Hard อย่างละ 5 ข้อ + เหตุผลทุกตัวเลือก ========= */
+/* ====== ตั้งค่าเชื่อม Google Sheet (แก้ให้ตรงของคุณ) ====== */
+const GAS_URL   = "PASTE_YOUR_WEB_APP_URL_HERE"; // เช่น https://script.google.com/macros/s/AKfyc.../exec
+const GAS_TOKEN = "CHANGE_ME_SAFE_TOKEN";        // ต้องตรงกับ SAVE_TOKEN ใน Apps Script
+
+/* ========= Question Bank: Easy/Medium/Hard อย่างละ 5 ข้อ ========= */
 const BANK = {
   Easy: [
     { q:"หม้อแปลง 250 kVA ไม่มีโหลด เสียงฮัมปกติ ไม่มีรอยรั่ว ควรทำอะไรเป็นลำดับแรก?",
@@ -414,46 +427,38 @@ const BANK = {
   ]
 };
 
-/* ========= Config ========= */
-const GAME_LEN = 10;        // จำนวนข้อที่เล่นต่อรอบ
-const T_LIMIT  = 45_000;    // 45 วินาทีต่อข้อ
+/* ========= Config & State ========= */
+const GAME_LEN = 10;        // จำนวนข้อ/รอบ
+const T_LIMIT  = 45_000;    // 45 วินาที/ข้อ
+let deck=[], idx=0, score=0, running=false, timer=null, tStart=0, userAnswers=[], order=[], lastLevel="Medium";
 
-/* ========= State ========= */
-let deck=[], idx=0, score=0, running=false, timer=null, tStart=0, userAnswers=[], order=[];
 const $=s=>document.querySelector(s);
 const show=id=>["#screen-home","#screen-how","#screen-quiz","#screen-result","#screen-review"].forEach(sel=>$(sel).classList.add("hidden")) || $(id).classList.remove("hidden");
 const fmt=n=>n.toLocaleString('th-TH');
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function buildDeck(level){ const src = level==="Mix"? [...BANK.Easy,...BANK.Medium,...BANK.Hard] : BANK[level]||BANK.Medium; return shuffle(src.slice()).slice(0, Math.min(GAME_LEN, src.length)); }
 
-/* ========= WebAudio: Pro Mix & Dynamic Scoring Sound ========= */
+/* ========= WebAudio (ดนตรีลื่นหู เร่งใกล้หมดเวลา) ========= */
 const AudioKit=(()=>{
   const ctx=new (window.AudioContext||window.webkitAudioContext)();
-
-  // === Master chain ===
-  const master=ctx.createGain(); master.gain.value=.0; // เริ่มปิดเสียง
+  const master=ctx.createGain(); master.gain.value=.0;
   const comp=ctx.createDynamicsCompressor();
   comp.threshold.value=-18; comp.knee.value=12; comp.ratio.value=3; comp.attack.value=0.003; comp.release.value=0.2;
   const limiter=ctx.createDynamicsCompressor();
   limiter.threshold.value=-3; limiter.knee.value=0; limiter.ratio.value=20; limiter.attack.value=0.001; limiter.release.value=0.08;
   master.connect(comp).connect(limiter).connect(ctx.destination);
 
-  // === Busses ===
   const musicBus=ctx.createGain(); musicBus.gain.value=.26; musicBus.connect(master);
   const percBus=ctx.createGain();  percBus.gain.value=.20;  percBus.connect(master);
   const sfxBus=ctx.createGain();   sfxBus.gain.value=.35;   sfxBus.connect(master);
 
-  // Brightness control for music (opens up with urgency)
   const musicFilter=ctx.createBiquadFilter(); musicFilter.type='lowpass'; musicFilter.frequency.value=1400; musicFilter.Q.value=0.7;
   musicBus.disconnect(); musicBus.connect(musicFilter).connect(master);
 
-  // Simple space (feedback delay as cheap reverb for SFX)
   const rev=ctx.createDelay(0.35); rev.delayTime.value=0.22;
   const revGain=ctx.createGain(); revGain.gain.value=0.12; sfxBus.connect(revGain).connect(rev).connect(master);
 
   function resume(){ if(ctx.state==='suspended') ctx.resume(); }
-
-  // === Helpers ===
   function envGain(duration, peak=0.6){
     const g=ctx.createGain();
     g.gain.setValueAtTime(0.0001, ctx.currentTime);
@@ -461,10 +466,10 @@ const AudioKit=(()=>{
     g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+duration);
     return g;
   }
-  function oscShot(freqStart, freqEnd, dur, type='sine', bus=sfxBus){
+  function oscShot(fs, fe, dur, type='sine', bus=sfxBus){
     const o=ctx.createOscillator(); const g=envGain(dur, .6);
-    o.type=type; o.frequency.setValueAtTime(freqStart, ctx.currentTime);
-    if(freqEnd && freqEnd>0) o.frequency.exponentialRampToValueAtTime(freqEnd, ctx.currentTime+dur);
+    o.type=type; o.frequency.setValueAtTime(fs, ctx.currentTime);
+    if(fe && fe>0) o.frequency.exponentialRampToValueAtTime(fe, ctx.currentTime+dur);
     (o.connect(g)).connect(bus); o.start(); o.stop(ctx.currentTime+dur);
   }
   function noise(duration, hp=800, bp=null, bus=sfxBus){
@@ -477,8 +482,6 @@ const AudioKit=(()=>{
     const g=envGain(duration, .5); chain.connect(hg).connect(g).connect(bus);
     src.start(); src.stop(ctx.currentTime+duration);
   }
-
-  // === Drum synths ===
   function kick(){
     const o=ctx.createOscillator(); o.type='sine';
     const g=ctx.createGain();
@@ -492,7 +495,6 @@ const AudioKit=(()=>{
   function snare(){ noise(0.15, 4000, 2400, percBus); }
   function hat(){ noise(0.05, 6000, 8000, percBus); }
 
-  // === Sequencer ===
   let playing=false, step=0, tempo=112, seqTimer=null;
   const pattern={ kick:[0,8], snare:[4,12], hat:[2,6,10,14], bass:[0,3,7,10,12,15] };
   function musicNote(freq, dur=0.14){
@@ -507,11 +509,9 @@ const AudioKit=(()=>{
   function seqLoop(){
     if(!playing) return;
     const beatMs = 60000/tempo;
-    // Drums
     if(pattern.kick.includes(step%16)) kick();
     if(pattern.snare.includes(step%16)) snare();
     if(pattern.hat.includes(step%16)) hat();
-    // Bass/arp
     if(pattern.bass.includes(step%16)){
       const base=110; const degrees=[0,7,12,14,19];
       const s=degrees[Math.floor(Math.random()*degrees.length)];
@@ -522,20 +522,16 @@ const AudioKit=(()=>{
   }
   function startBG(){ if(playing) return; resume(); playing=true; step=0; seqLoop(); }
   function stopBG(){ playing=false; clearTimeout(seqTimer); }
-
   function setUrgency(r){
-    // r: 1 (เริ่มต้น) → 0 (ใกล้หมดเวลา)
+    // r: 1 (เริ่ม) → 0 (จะหมดเวลา)
     tempo = 112 + (1-r)*84;
-    percBus.gain.value = .14 + (1-r)*.22;   // กลองเด่นขึ้น
-    musicBus.gain.value = .20 + (1-r)*.20;  // ดนตรีหนาขึ้น
-    musicFilter.frequency.setTargetAtTime(900 + (1-r)*2900, ctx.currentTime, 0.12); // เสียงเปิดขึ้น
+    percBus.gain.value = .14 + (1-r)*.22;
+    musicBus.gain.value = .20 + (1-r)*.20;
+    musicFilter.frequency.setTargetAtTime(900 + (1-r)*2900, ctx.currentTime, 0.12);
   }
   function setMute(m){ master.gain.setTargetAtTime(m?0:0.9, ctx.currentTime, 0.05); }
-
-  // === SFX ===
   function answer(ok=true){
-    resume();
-    // duck เล็กน้อยเพื่อให้ SFX โดดเด่น
+    if(ctx.state==='suspended') ctx.resume();
     const gNow = master.gain.value;
     master.gain.cancelScheduledValues(ctx.currentTime);
     master.gain.setTargetAtTime(Math.max(0.001,gNow*0.85), ctx.currentTime, 0.01);
@@ -550,17 +546,16 @@ const AudioKit=(()=>{
       if(document.querySelector('#haptic')?.checked) try{navigator.vibrate?.([10,40,10]);}catch{}
     }
   }
-  function timeup(){ resume(); oscShot(440, 220, 0.6, 'square', sfxBus); try{navigator.vibrate?.([20,60,20])}catch{} }
-  function hint(){ resume(); oscShot(880, 880, 0.08, 'sine', sfxBus); }
-  function ui(){ resume(); oscShot(1200, 1000, 0.06, 'triangle', sfxBus); }
-  function think(){ resume(); oscShot(660, 740, 0.1, 'sine', sfxBus); }
+  function timeup(){ if(ctx.state==='suspended') ctx.resume(); oscShot(440, 220, 0.6, 'square', sfxBus); try{navigator.vibrate?.([20,60,20])}catch{} }
+  function hint(){ if(ctx.state==='suspended') ctx.resume(); oscShot(880, 880, 0.08, 'sine', sfxBus); }
+  function ui(){ if(ctx.state==='suspended') ctx.resume(); oscShot(1200, 1000, 0.06, 'triangle', sfxBus); }
+  function think(){ if(ctx.state==='suspended') ctx.resume(); oscShot(660, 740, 0.1, 'sine', sfxBus); }
   function fanfare(total=0){
-    resume();
+    if(ctx.state==='suspended') ctx.resume();
     const base = total>=8000? 523.25: total>=5000? 440: 392; // C5/A4/G4
     [0,2,4,7,12].forEach((n,i)=>{ setTimeout(()=>oscShot(base*Math.pow(2,n/12), base*Math.pow(2,(n+12)/12), 0.16, 'triangle', sfxBus), i*110); });
     noise(0.25, 4000, 6000, sfxBus);
   }
-
   return {startBG,stopBG,setUrgency,setMute,answer,timeup,hint,ui,think,fanfare};
 })();
 
@@ -576,12 +571,12 @@ const FX=(()=>{
   return {boom};
 })();
 
-/* ========= Flow ========= */
+/* ========= Core Flow ========= */
 function startGame(){
-  const lv = $("#level").value;
-  deck = buildDeck(lv);
+  lastLevel = $("#level").value;
+  deck = buildDeck(lastLevel);
   idx=0; score=0; userAnswers=[];
-  $("#lvlTag").textContent = lv;
+  $("#lvlTag").textContent = lastLevel;
   $("#score").textContent = "0";
   show("#screen-quiz");
   nextQuestion();
@@ -598,14 +593,12 @@ function nextQuestion(){
   $("#qno").textContent = `ข้อที่ ${idx+1}/${deck.length}`;
   $("#qtext").textContent = q.q;
 
-  // สุ่มตำแหน่งตัวเลือก
   order = shuffle([0,1,2,3]);
-
   const box=$("#choices"); box.innerHTML="";
   order.forEach((origChoiceIdx, i)=>{
     const b=document.createElement("button"); b.className="choice";
     b.innerHTML=`<span class="letter">${"ABCD"[i]}</span> <span>${q.choices[origChoiceIdx]}</span>`;
-    b.onclick=()=>pick(i); // i = index หลังสับ
+    b.onclick=()=>pick(i);
     box.appendChild(b);
   });
 
@@ -626,10 +619,8 @@ function pick(shuffledIndex){
   running=false; clearInterval(timer);
   const q=deck[idx];
   const selectedOrig = order[shuffledIndex];
-  const ch=[...document.querySelectorAll(".choice")];
-
-  // หาตัวเลือกที่เป็นคำตอบที่ถูกในตำแหน่งที่แสดง
   const correctShuffledIndex = order.indexOf(q.correct);
+  const ch=[...document.querySelectorAll(".choice")];
 
   ch.forEach((c,ii)=>{ 
     c.disabled=true; 
@@ -642,7 +633,7 @@ function pick(shuffledIndex){
   const got = ok ? Math.max(0, Math.round(1000*(remain/T_LIMIT))) : 0;
   score+=got; $("#score").textContent=fmt(score);
 
-  userAnswers.push({i:selectedOrig, got, correct:q.correct, q:q.q, choices:q.choices, reasons:q.reasons, why:q.why, takeaway:q.takeaway, thinkQ:q.thinkQ, thinkA:q.thinkA, order:order.slice()});
+  userAnswers.push({i:selectedOrig, got, correct:q.correct, q:q.q, choices:q.choices, reasons:q.reasons, why:q.why, takeaway:q.takeaway, thinkQ:q.thinkQ, thinkA:q.thinkA, order:order.slice(), elapsedMs:elapsed});
   showExplain(ok, got);
   AudioKit.answer(ok);
   if(ok && got>700) FX.boom();
@@ -653,17 +644,15 @@ function timeUp(){
   const correctShuffledIndex = order.indexOf(q.correct);
   const ch=[...document.querySelectorAll(".choice")];
   ch.forEach((c,ii)=>{ c.disabled=true; if(ii===correctShuffledIndex) c.classList.add("correct") });
-  userAnswers.push({i:null, got:0, correct:q.correct, q:q.q, choices:q.choices, reasons:q.reasons, why:q.why, takeaway:q.takeaway, thinkQ:q.thinkQ, thinkA:q.thinkA, order:order.slice()});
+  userAnswers.push({i:null, got:0, correct:q.correct, q:q.q, choices:q.choices, reasons:q.reasons, why:q.why, takeaway:q.takeaway, thinkQ:q.thinkQ, thinkA:q.thinkA, order:order.slice(), elapsedMs:T_LIMIT});
   showExplain(false,0,true);
   AudioKit.timeup();
 }
 
-/* === เฉลย: ไม่มีปุ่ม Next ด้านบน เหลือเฉพาะปุ่มล่าง และไม่ auto‑advance === */
 function showExplain(correct, got, timeout=false){
   const q=deck[idx]; const el=$("#explain");
   const head = correct? `✅ ถูกต้อง! +${fmt(got)} คะแนน` : (timeout? "⌛ หมดเวลา!":"❌ ยังไม่ใช่");
 
-  // สร้างรายการเหตุผลตามลำดับตัวเลือกที่ "แสดงหลังสุ่ม"
   const list = order.map((origIdx, i)=>{
     const isRight = (origIdx===q.correct);
     const mark = isRight? "✅ ถูก" : "❌ ผิด";
@@ -683,9 +672,7 @@ function showExplain(correct, got, timeout=false){
   `;
   el.classList.remove("hidden");
 
-  // แสดงปุ่ม Next ลอยขอบล่าง (ปุ่มเดียว)
   $("#footerNext").classList.add("show");
-
   const goNext = ()=>{
     AudioKit.ui();
     $("#footerNext").classList.remove("show");
@@ -694,7 +681,6 @@ function showExplain(correct, got, timeout=false){
   };
   $("#btn-next-fixed").onclick = goNext;
 
-  // เฉลยคำถามชวนคิด
   $("#btn-see-think").onclick=()=>{
     const sol = q.thinkA || "จัดลำดับที่ลดความเสี่ยงสูงสุดต่อความปลอดภัย/ความต่อเนื่องก่อน";
     const tag = document.createElement("div");
@@ -703,7 +689,6 @@ function showExplain(correct, got, timeout=false){
     AudioKit.think();
   };
 
-  // เลื่อนจอไปยังกล่องอธิบายให้เห็นปุ่มล่าง
   el.scrollIntoView({behavior:"smooth", block:"nearest"});
 }
 
@@ -734,7 +719,7 @@ function endGame(){
   AudioKit.stopBG();
   setTimeout(()=>AudioKit.fanfare(score), 180);
 
-  // table
+  // ตารางคำตอบ
   const rows = userAnswers.map((r,i)=>{
     const your = r.i==null? "—": "ABCD"[r.order.indexOf(r.i)];
     const ans = "ABCD"[r.order.indexOf(r.correct)];
@@ -751,6 +736,9 @@ function endGame(){
         <tbody>${rows}</tbody>
       </table>
     </div>`;
+
+  // ผูกปุ่มบันทึกคะแนน (หลังจบเกม)
+  bindSaveButton();
 }
 
 function makeReview(){
@@ -775,6 +763,65 @@ function makeReview(){
   $("#reviewList").innerHTML = html || `<div class="sub">ยังไม่มีข้อมูล ลองเล่นเกมก่อนนะ</div>`;
 }
 
+/* ========= Google Sheet Save ========= */
+async function saveScoreToSheet(payload) {
+  const msg = document.getElementById('saveMsg');
+  msg.textContent = "กำลังบันทึก…";
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json().catch(()=>({}));
+    if(res.ok && json.ok){
+      msg.textContent = "✅ บันทึกเรียบร้อย";
+    }else{
+      msg.textContent = "⚠️ บันทึกไม่สำเร็จ: " + (json.error || res.status);
+    }
+  } catch(err) {
+    msg.textContent = "❌ ขัดข้อง (ออฟไลน์/URL หรือ Token ไม่ถูกต้อง): " + err;
+  }
+}
+function bindSaveButton(){
+  const btnSave = document.getElementById('btn-save');
+  if(!btnSave) return;
+  btnSave.onclick = ()=>{
+    const user_name = (document.getElementById('saveName').value || "").trim();
+    const user_id   = (document.getElementById('saveId').value || "").trim();
+    if(!user_name || !user_id){
+      document.getElementById('saveMsg').textContent = "โปรดกรอกชื่อผู้ใช้ และ รหัสผู้ใช้ ก่อน";
+      return;
+    }
+    // นับผลลัพธ์
+    const totalQ = deck.length;
+    const correct = userAnswers.filter(r => r.i === r.correct).length;
+    const wrong   = totalQ - correct;
+    const avg_time_sec = (userAnswers.reduce((s,r)=>s+(r.elapsedMs||0),0) / totalQ / 1000) || 0;
+
+    const device = `${navigator.platform || ''}`.trim();
+    const user_agent = `${navigator.userAgent || ''}`.trim();
+    const session_id = Math.random().toString(36).slice(2, 10);
+
+    const payload = {
+      token: GAS_TOKEN,
+      user_name,
+      user_id,
+      level: lastLevel,
+      score: score,
+      total_questions: totalQ,
+      correct,
+      wrong,
+      avg_time_sec: Number(avg_time_sec.toFixed(2)),
+      device,
+      user_agent,
+      session_id,
+      note: '' // เติมข้อความพิเศษได้
+    };
+    saveScoreToSheet(payload);
+  };
+}
+
 /* ========= Bindings ========= */
 $("#btn-start").onclick=()=>{ AudioKit.ui(); startGame(); };
 $("#btn-start2").onclick=()=>{ AudioKit.ui(); startGame(); };
@@ -788,7 +835,6 @@ $("#btn-skip").onclick=()=>{ AudioKit.timeup(); timeUp(); };
 $("#btn-hint1").onclick=()=>{ AudioKit.hint(); sayHint(0); };
 $("#btn-hint2").onclick=()=>{ AudioKit.hint(); sayHint(1); };
 
-// คำถามชวนคิด
 $("#btn-think").onclick=()=>{
   const q=deck[idx]; const el=$("#explain");
   const msg = `<div class="sub"><b>คำถามชวนคิด:</b> ${q.thinkQ || "อะไรเสี่ยงต่อความปลอดภัย/ความต่อเนื่อง? และอะไรลดความร้อนได้ทันที?"}</div>`;
@@ -804,7 +850,6 @@ $("#btn-think-sol").onclick=()=>{
   AudioKit.think();
 };
 
-// mute sync
 $("#mute").onchange=e=>{
   AudioKit.setMute(e.target.checked);
   if(!e.target.checked) AudioKit.startBG(); else AudioKit.stopBG();
@@ -829,14 +874,8 @@ function sayHint(n){
   $("#best").textContent=fmt(best);
   $("#plays").textContent=fmt(plays);
   show("#screen-home");
-  // เตรียม WebAudio (ต้องใช้ gesture เพื่อเริ่มบน iOS)
   document.body.addEventListener("click", ()=>{ try{AudioKit.setMute(true);}catch{} }, {once:true});
 })();
 </script>
 </body>
 </html>
-
-
-
-
-
